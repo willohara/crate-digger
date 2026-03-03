@@ -1059,7 +1059,7 @@ function App() {
     try {
       // 1) Create playlist
       const name = playlistName || `Crate Digger – ${year || "Mixed"}`;
-      const plRes = await fetch(`${SPOTIFY_API}/users/${spotifyUser.id}/playlists`, {
+      const plRes = await fetch(`${SPOTIFY_API}/me/playlists`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${spotifyToken}`,
