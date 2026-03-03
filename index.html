@@ -1097,7 +1097,7 @@ function App() {
       // 3) Add tracks in batches of 100
       for (let i = 0; i < trackUris.length; i += 100) {
         const batch = trackUris.slice(i, i + 100);
-        await fetch(`${SPOTIFY_API}/playlists/${playlist.id}/tracks`, {
+        await fetch(`${SPOTIFY_API}/playlists/${playlist.id}/items`, {
           method: "POST",
           headers: {
             Authorization: `Bearer ${spotifyToken}`,
