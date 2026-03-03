@@ -445,6 +445,18 @@
     white-space: nowrap;
   }
   .yt-link:hover { background: #661122; color: #fff; }
+  .spotify-link {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    color: var(--spotify-green);
+    text-decoration: none;
+    padding: 0.25rem 0.5rem;
+    border: 1px solid #15823b;
+    border-radius: 3px;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .spotify-link:hover { background: #15823b; color: #fff; }
   .discogs-link {
     font-family: var(--font-mono);
     font-size: 0.68rem;
@@ -593,6 +605,11 @@ function parseTitle(t) {
 function ytSearchUrl(artist, title) {
   const q = encodeURIComponent(`${artist} ${title}`.trim());
   return `https://www.youtube.com/results?search_query=${q}`;
+}
+
+function spotifySearchUrl(artist, title) {
+  const q = encodeURIComponent(`${artist} ${title}`.trim());
+  return `https://open.spotify.com/search/${q}`;
 }
 
 function discogsUrl(uri) {
@@ -1091,10 +1108,8 @@ function App() {
                   </div>
                 </div>
                 <div className="release-actions" onClick={e => e.stopPropagation()}>
-                  {match === undefined ? null :
-                    match ? <span className="match-badge match-spotify">Spotify ✓</span> :
-                    <a className="yt-link" href={ytSearchUrl(artist, title)} target="_blank" rel="noopener">YouTube ↗</a>
-                  }
+                  <a className="spotify-link" href={spotifySearchUrl(artist, title)} target="_blank" rel="noopener">♫ Spotify ↗</a>
+                  <a className="yt-link" href={ytSearchUrl(artist, title)} target="_blank" rel="noopener">▶ YouTube ↗</a>
                   {r.uri && (
                     <a className="discogs-link" href={discogsUrl(r.uri)} target="_blank" rel="noopener">Discogs ↗</a>
                   )}
