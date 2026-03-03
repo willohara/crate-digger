@@ -607,7 +607,7 @@ const { useState, useEffect, useCallback, useRef } = React;
    CONFIG — Update these or enter them in the UI
    ═══════════════════════════════════════════════════════════════ */
 const SPOTIFY_CLIENT_ID = "2ab0a937c9404edc89d76ce1e81d735d";
-const REDIRECT_URI = "https://willohara.github.io/crate-dig/";
+const REDIRECT_URI = "https://willohara.github.io/crate-digger/";
 const DISCOGS_API = "https://api.discogs.com/database/search";
 const SPOTIFY_API = "https://api.spotify.com/v1";
 const SPOTIFY_AUTH = "https://accounts.spotify.com/authorize";
@@ -947,14 +947,14 @@ function App() {
 
     try {
       // 1) Create playlist
-      const name = playlistName || `Crate Dig – ${year || "Mixed"}`;
+      const name = playlistName || `Crate Digger – ${year || "Mixed"}`;
       const plRes = await fetch(`${SPOTIFY_API}/users/${spotifyUser.id}/playlists`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${spotifyToken}`,
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({ name, description: `Dug from Discogs via Crate Dig`, public: false })
+        body: JSON.stringify({ name, description: `Dug from Discogs via Crate Digger`, public: false })
       });
       if (!plRes.ok) throw new Error("Failed to create playlist");
       const playlist = await plRes.json();
@@ -1013,7 +1013,7 @@ function App() {
       {/* ═══ HEADER ═══ */}
       <div className="header">
         <div className="header-row">
-          <h1>Crate Dig <span>discogs → spotify</span></h1>
+          <h1>Crate Digger <span>discogs → spotify</span></h1>
           <div className="auth-status">
             {discogsToken ? <span className="badge badge-ok">DISCOGS ✓</span> : <span className="badge badge-off">DISCOGS (no token)</span>}
             {spotifyUser ? (
@@ -1304,7 +1304,7 @@ function App() {
                 <input
                   value={playlistName}
                   onChange={e => setPlaylistName(e.target.value)}
-                  placeholder={`Crate Dig – ${year || "Mixed"}`}
+                  placeholder={`Crate Digger – ${year || "Mixed"}`}
                 />
                 <button
                   className="btn btn-spotify"
