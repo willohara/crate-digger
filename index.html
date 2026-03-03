@@ -1,0 +1,1273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Crate Dig</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=JetBrains+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0e0d0b;
+    --surface: #1a1814;
+    --surface2: #242019;
+    --border: #33302a;
+    --border-light: #44403a;
+    --amber: #d4a043;
+    --amber-dim: #a67c32;
+    --amber-glow: #e8b44d;
+    --cream: #e8dcc8;
+    --cream-dim: #b0a690;
+    --red: #c45c4a;
+    --green: #5a9a6a;
+    --green-dim: #3d6b4a;
+    --spotify-green: #1db954;
+    --youtube-red: #ff0033;
+    --font-display: 'DM Serif Display', Georgia, serif;
+    --font-body: 'DM Sans', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--cream);
+    font-family: var(--font-body);
+    font-weight: 300;
+    min-height: 100vh;
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  /* Grain overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    opacity: 0.035;
+    pointer-events: none;
+    z-index: 9999;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* ─── Header ─── */
+  .header {
+    padding: 2rem 2rem 1rem;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+  }
+  .header::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 2rem;
+    width: 120px;
+    height: 2px;
+    background: var(--amber);
+  }
+  .header h1 {
+    font-family: var(--font-display);
+    font-size: 2.4rem;
+    color: var(--amber);
+    letter-spacing: -0.02em;
+    line-height: 1;
+  }
+  .header h1 span {
+    font-style: italic;
+    color: var(--cream-dim);
+    font-size: 0.5em;
+    margin-left: 0.8rem;
+    letter-spacing: 0.05em;
+  }
+  .header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+  .auth-status {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .badge {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    font-weight: 400;
+    padding: 0.3rem 0.6rem;
+    border-radius: 3px;
+    letter-spacing: 0.03em;
+  }
+  .badge-ok { background: var(--green-dim); color: #c2e6cc; }
+  .badge-off { background: var(--border); color: var(--cream-dim); }
+  .badge-spotify { background: #15823b; color: #b8f0ce; }
+
+  /* ─── Layout ─── */
+  .app {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 1.5rem 4rem;
+  }
+
+  /* ─── Setup Panel ─── */
+  .setup-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 1.5rem;
+    margin: 1.5rem 0;
+  }
+  .setup-panel h2 {
+    font-family: var(--font-display);
+    font-size: 1.2rem;
+    color: var(--amber);
+    margin-bottom: 1rem;
+  }
+  .setup-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+  @media (max-width: 640px) { .setup-grid { grid-template-columns: 1fr; } }
+  .setup-group label {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--cream-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    display: block;
+    margin-bottom: 0.4rem;
+  }
+  .setup-group input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--cream);
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    padding: 0.6rem 0.8rem;
+    border-radius: 4px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .setup-group input:focus { border-color: var(--amber); }
+  .setup-group input::placeholder { color: var(--border-light); }
+  .setup-group .hint {
+    font-size: 0.7rem;
+    color: var(--cream-dim);
+    margin-top: 0.3rem;
+    opacity: 0.7;
+  }
+  .setup-actions {
+    margin-top: 1rem;
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  /* ─── Buttons ─── */
+  .btn {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: 500;
+    padding: 0.55rem 1.1rem;
+    border: 1px solid var(--border-light);
+    border-radius: 4px;
+    background: var(--surface2);
+    color: var(--cream);
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+  }
+  .btn:hover { border-color: var(--amber); color: var(--amber); }
+  .btn:disabled { opacity: 0.4; cursor: default; }
+  .btn:disabled:hover { border-color: var(--border-light); color: var(--cream); }
+  .btn-primary {
+    background: var(--amber-dim);
+    border-color: var(--amber);
+    color: var(--bg);
+    font-weight: 500;
+  }
+  .btn-primary:hover { background: var(--amber); }
+  .btn-spotify {
+    background: #15823b;
+    border-color: var(--spotify-green);
+    color: #fff;
+  }
+  .btn-spotify:hover { background: var(--spotify-green); }
+  .btn-sm { padding: 0.35rem 0.7rem; font-size: 0.68rem; }
+  .btn-danger { border-color: var(--red); color: var(--red); }
+  .btn-danger:hover { background: var(--red); color: var(--bg); }
+
+  /* ─── Search Form ─── */
+  .search-section { margin-top: 1.5rem; }
+  .search-section h2 {
+    font-family: var(--font-display);
+    font-size: 1.3rem;
+    color: var(--cream);
+    margin-bottom: 1rem;
+  }
+  .search-form {
+    display: grid;
+    grid-template-columns: 100px 1fr 140px 140px 120px;
+    gap: 0.6rem;
+    align-items: end;
+  }
+  @media (max-width: 780px) {
+    .search-form { grid-template-columns: 1fr 1fr; }
+  }
+  .field label {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    color: var(--cream-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    display: block;
+    margin-bottom: 0.3rem;
+  }
+  .field input, .field select {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--cream);
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    padding: 0.55rem 0.7rem;
+    border-radius: 4px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .field input:focus, .field select:focus { border-color: var(--amber); }
+  .field select { cursor: pointer; }
+  .field select option { background: var(--surface); }
+  .search-btn-row {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.8rem;
+  }
+
+  /* ─── Tabs ─── */
+  .tabs {
+    display: flex;
+    gap: 0;
+    margin-top: 1.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .tab {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    font-weight: 400;
+    padding: 0.6rem 1.2rem;
+    background: none;
+    border: none;
+    color: var(--cream-dim);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.15s;
+    letter-spacing: 0.03em;
+  }
+  .tab:hover { color: var(--cream); }
+  .tab.active { color: var(--amber); border-bottom-color: var(--amber); }
+  .tab .count {
+    background: var(--border);
+    color: var(--cream-dim);
+    font-size: 0.6rem;
+    padding: 0.1rem 0.4rem;
+    border-radius: 10px;
+    margin-left: 0.4rem;
+  }
+  .tab.active .count { background: var(--amber-dim); color: var(--bg); }
+
+  /* ─── Results ─── */
+  .results { margin-top: 1rem; }
+  .results-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+  }
+  .results-count {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--cream-dim);
+  }
+  .release-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 0.9rem 1rem;
+    margin-bottom: 0.5rem;
+    display: grid;
+    grid-template-columns: 36px 56px 1fr auto;
+    gap: 0.8rem;
+    align-items: center;
+    transition: border-color 0.15s, background 0.15s;
+    cursor: pointer;
+  }
+  .release-card:hover { border-color: var(--border-light); background: var(--surface2); }
+  .release-card.selected { border-color: var(--amber-dim); background: #1f1b14; }
+  .release-check {
+    width: 22px;
+    height: 22px;
+    border: 1.5px solid var(--border-light);
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+  .release-card.selected .release-check {
+    border-color: var(--amber);
+    background: var(--amber);
+  }
+  .release-check svg { opacity: 0; transition: opacity 0.15s; }
+  .release-card.selected .release-check svg { opacity: 1; }
+  .release-thumb {
+    width: 56px;
+    height: 56px;
+    border-radius: 3px;
+    background: var(--border);
+    object-fit: cover;
+    flex-shrink: 0;
+  }
+  .release-info h3 {
+    font-family: var(--font-body);
+    font-size: 0.88rem;
+    font-weight: 500;
+    color: var(--cream);
+    line-height: 1.3;
+  }
+  .release-meta {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    color: var(--cream-dim);
+    margin-top: 0.2rem;
+    display: flex;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+  }
+  .release-meta span { opacity: 0.7; }
+  .release-actions {
+    display: flex;
+    gap: 0.4rem;
+    flex-shrink: 0;
+  }
+  .match-badge {
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 3px;
+    white-space: nowrap;
+  }
+  .match-spotify { background: #15823b; color: #b8f0ce; }
+  .match-youtube { background: #661122; color: #ffaaaa; }
+  .match-none { background: var(--border); color: var(--cream-dim); }
+
+  /* ─── Pagination ─── */
+  .pagination {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+  }
+  .page-info {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--cream-dim);
+    display: flex;
+    align-items: center;
+  }
+
+  /* ─── Playlist Builder ─── */
+  .playlist-builder {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 1.5rem;
+    margin-top: 1rem;
+  }
+  .playlist-builder h3 {
+    font-family: var(--font-display);
+    font-size: 1.1rem;
+    color: var(--amber);
+    margin-bottom: 1rem;
+  }
+  .playlist-input-row {
+    display: flex;
+    gap: 0.6rem;
+    margin-bottom: 1rem;
+  }
+  .playlist-input-row input {
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--cream);
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    padding: 0.6rem 0.8rem;
+    border-radius: 4px;
+    outline: none;
+  }
+  .playlist-input-row input:focus { border-color: var(--amber); }
+  .unmatched-section { margin-top: 1.5rem; }
+  .unmatched-section h4 {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--cream-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 0.6rem;
+  }
+  .unmatched-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.82rem;
+  }
+  .yt-link {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    color: var(--youtube-red);
+    text-decoration: none;
+    padding: 0.25rem 0.5rem;
+    border: 1px solid #661122;
+    border-radius: 3px;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .yt-link:hover { background: #661122; color: #fff; }
+  .discogs-link {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    color: var(--amber-dim);
+    text-decoration: none;
+    padding: 0.25rem 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .discogs-link:hover { background: var(--amber-dim); color: var(--bg); }
+
+  /* ─── Loading ─── */
+  .spinner {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid var(--border);
+    border-top-color: var(--amber);
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+    margin-right: 0.5rem;
+    vertical-align: middle;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .loading-bar {
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+    margin: 1rem 0;
+  }
+  .loading-bar-fill {
+    height: 100%;
+    background: var(--amber);
+    border-radius: 2px;
+    transition: width 0.3s;
+  }
+
+  /* ─── Empty states ─── */
+  .empty {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--cream-dim);
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+  }
+  .empty-icon { font-size: 2rem; margin-bottom: 0.5rem; display: block; }
+
+  /* ─── Success panel ─── */
+  .success-panel {
+    background: #14291c;
+    border: 1px solid var(--green-dim);
+    border-radius: 6px;
+    padding: 1.25rem;
+    margin-top: 1rem;
+    text-align: center;
+  }
+  .success-panel a {
+    color: var(--spotify-green);
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+  }
+
+  /* ─── Error ─── */
+  .error-msg {
+    background: #2a1515;
+    border: 1px solid #5a2a2a;
+    color: #e8a0a0;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    padding: 0.6rem 0.9rem;
+    border-radius: 4px;
+    margin-top: 0.5rem;
+  }
+
+  /* ─── Select all bar ─── */
+  .select-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+    margin-bottom: 0.5rem;
+  }
+
+  /* ─── Animations ─── */
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .fade-in { animation: fadeIn 0.25s ease-out forwards; }
+
+  /* ─── Toggle ─── */
+  .toggle-link {
+    background: none;
+    border: none;
+    color: var(--amber-dim);
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .toggle-link:hover { color: var(--amber); }
+</style>
+</head>
+<body>
+
+<div class="app" id="app"></div>
+
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+<script type="text/babel">
+const { useState, useEffect, useCallback, useRef } = React;
+
+/* ═══════════════════════════════════════════════════════════════
+   CONFIG — Update these or enter them in the UI
+   ═══════════════════════════════════════════════════════════════ */
+const SPOTIFY_CLIENT_ID = "2ab0a937c9404edc89d76ce1e81d735d";
+const REDIRECT_URI = "https://willohara.github.io/crate-dig/";
+const DISCOGS_API = "https://api.discogs.com/database/search";
+const SPOTIFY_API = "https://api.spotify.com/v1";
+const SPOTIFY_AUTH = "https://accounts.spotify.com/authorize";
+const SCOPES = "playlist-modify-public playlist-modify-private user-read-private";
+
+const GENRES = [
+  "", "Rock", "Electronic", "Jazz", "Funk / Soul", "Hip Hop",
+  "Classical", "Pop", "Folk, World, & Country", "Reggae", "Latin",
+  "Blues", "Stage & Screen", "Brass & Military"
+];
+
+const delay = ms => new Promise(r => setTimeout(r, ms));
+
+// Parse "Artist - Title" from Discogs title
+function parseTitle(t) {
+  if (!t) return { artist: "", title: t || "" };
+  const idx = t.indexOf(" - ");
+  if (idx === -1) return { artist: "", title: t };
+  return { artist: t.slice(0, idx).trim(), title: t.slice(idx + 3).trim() };
+}
+
+function ytSearchUrl(artist, title) {
+  const q = encodeURIComponent(`${artist} ${title}`.trim());
+  return `https://www.youtube.com/results?search_query=${q}`;
+}
+
+function discogsUrl(uri) {
+  if (!uri) return "#";
+  return uri.startsWith("http") ? uri : `https://www.discogs.com${uri}`;
+}
+
+// ─── Check icon SVG ───
+function CheckIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+      <path d="M3 7.5L5.5 10L11 4" stroke="#0e0d0b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MAIN APP
+   ═══════════════════════════════════════════════════════════════ */
+function App() {
+  // ─── State ─── 
+  const [discogsToken, setDiscogsToken] = useState("");
+  const [spotifyToken, setSpotifyToken] = useState(null);
+  const [spotifyUser, setSpotifyUser] = useState(null);
+  const [showSetup, setShowSetup] = useState(true);
+
+  // Search
+  const [year, setYear] = useState("1972");
+  const [genre, setGenre] = useState("");
+  const [query, setQuery] = useState("");
+  const [country, setCountry] = useState("");
+  const [results, setResults] = useState([]);
+  const [pagination, setPagination] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [page, setPage] = useState(1);
+
+  // Selection + matching
+  const [selected, setSelected] = useState({});  // id -> release object
+  const [spotifyMatches, setSpotifyMatches] = useState({}); // id -> {uri, name, artist, url} | null
+  const [matching, setMatching] = useState(false);
+  const [matchProgress, setMatchProgress] = useState({ done: 0, total: 0 });
+
+  // Playlist
+  const [playlistName, setPlaylistName] = useState("");
+  const [creating, setCreating] = useState(false);
+  const [playlistResult, setPlaylistResult] = useState(null);
+
+  // Tab
+  const [tab, setTab] = useState("search");
+
+  // ─── PKCE Helpers ───
+  function generateCodeVerifier(len) {
+    const arr = new Uint8Array(len || 64);
+    crypto.getRandomValues(arr);
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~";
+    return Array.from(arr, function(b) { return chars[b % chars.length]; }).join("");
+  }
+  async function pkceChallenge(verifier) {
+    const data = new TextEncoder().encode(verifier);
+    const digest = await crypto.subtle.digest("SHA-256", data);
+    return btoa(String.fromCharCode.apply(null, new Uint8Array(digest)))
+      .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  }
+
+  // ─── Spotify OAuth (PKCE Authorization Code Flow) ───
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get("code");
+    if (!code) return;
+    const verifier = sessionStorage.getItem("spotify_code_verifier");
+    if (!verifier) return;
+
+    fetch("https://accounts.spotify.com/api/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        client_id: SPOTIFY_CLIENT_ID,
+        grant_type: "authorization_code",
+        code: code,
+        redirect_uri: REDIRECT_URI,
+        code_verifier: verifier,
+      }),
+    })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.access_token) {
+          setSpotifyToken(data.access_token);
+          sessionStorage.removeItem("spotify_code_verifier");
+          window.history.replaceState(null, "", window.location.pathname);
+        } else {
+          setError("Spotify auth failed: " + (data.error_description || data.error || "unknown"));
+        }
+      })
+      .catch(function(e) { setError("Spotify auth error: " + e.message); });
+  }, []);
+
+  // Fetch Spotify user profile once authenticated
+  useEffect(() => {
+    if (!spotifyToken) return;
+    fetch(`${SPOTIFY_API}/me`, {
+      headers: { Authorization: `Bearer ${spotifyToken}` }
+    })
+      .then(r => { if (!r.ok) throw new Error("Token expired"); return r.json(); })
+      .then(d => setSpotifyUser(d))
+      .catch(() => { setSpotifyToken(null); setSpotifyUser(null); });
+  }, [spotifyToken]);
+
+  const loginSpotify = async () => {
+    const verifier = generateCodeVerifier(64);
+    const challenge = await pkceChallenge(verifier);
+    sessionStorage.setItem("spotify_code_verifier", verifier);
+    const state = Math.random().toString(36).slice(2, 10);
+    const url = SPOTIFY_AUTH + "?response_type=code" +
+      "&client_id=" + encodeURIComponent(SPOTIFY_CLIENT_ID) +
+      "&scope=" + encodeURIComponent(SCOPES) +
+      "&redirect_uri=" + encodeURIComponent(REDIRECT_URI) +
+      "&state=" + state +
+      "&code_challenge_method=S256" +
+      "&code_challenge=" + challenge;
+    window.location.href = url;
+  };
+
+  // ─── Discogs Search ───
+  const searchDiscogs = async (p = 1) => {
+    if (!discogsToken) { setError("Enter your Discogs token above"); return; }
+    setLoading(true);
+    setError("");
+    setPage(p);
+    try {
+      const url = new URL(DISCOGS_API);
+      url.searchParams.set("token", discogsToken);
+      url.searchParams.set("type", "release");
+      url.searchParams.set("per_page", "20");
+      url.searchParams.set("page", String(p));
+      if (year) url.searchParams.set("year", year);
+      if (genre) url.searchParams.set("genre", genre);
+      if (query) url.searchParams.set("q", query);
+      if (country) url.searchParams.set("country", country);
+
+      const res = await fetch(url.toString(), {
+        headers: { "User-Agent": "CrateDig/1.0" }
+      });
+      if (!res.ok) {
+        const txt = await res.text();
+        throw new Error(`Discogs API error (${res.status}): ${txt.slice(0, 200)}`);
+      }
+      const data = await res.json();
+      setResults(data.results || []);
+      setPagination(data.pagination || null);
+    } catch (e) {
+      setError(e.message);
+      setResults([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ─── Toggle selection ───
+  const toggleSelect = (release) => {
+    setSelected(prev => {
+      const next = { ...prev };
+      if (next[release.id]) {
+        delete next[release.id];
+      } else {
+        next[release.id] = release;
+      }
+      return next;
+    });
+  };
+
+  const selectAllOnPage = () => {
+    setSelected(prev => {
+      const next = { ...prev };
+      results.forEach(r => { next[r.id] = r; });
+      return next;
+    });
+  };
+
+  const deselectAllOnPage = () => {
+    setSelected(prev => {
+      const next = { ...prev };
+      results.forEach(r => { delete next[r.id]; });
+      return next;
+    });
+  };
+
+  const clearSelected = () => { setSelected({}); setSpotifyMatches({}); };
+
+  // ─── Match selected to Spotify ───
+  const matchToSpotify = async () => {
+    if (!spotifyToken) { alert("Connect Spotify first"); return; }
+    const entries = Object.entries(selected);
+    if (entries.length === 0) return;
+
+    setMatching(true);
+    setMatchProgress({ done: 0, total: entries.length });
+    const newMatches = { ...spotifyMatches };
+
+    for (let i = 0; i < entries.length; i++) {
+      const [id, release] = entries[i];
+      if (newMatches[id] !== undefined) {
+        setMatchProgress({ done: i + 1, total: entries.length });
+        continue; // already matched
+      }
+
+      const { artist, title } = parseTitle(release.title);
+      let q = "";
+      if (artist && title) {
+        q = `artist:${artist} album:${title}`;
+      } else {
+        q = release.title;
+      }
+
+      try {
+        const url = `${SPOTIFY_API}/search?type=album&limit=3&q=${encodeURIComponent(q)}`;
+        const res = await fetch(url, { headers: { Authorization: `Bearer ${spotifyToken}` } });
+        if (res.status === 429) {
+          const wait = parseInt(res.headers.get("Retry-After") || "2") * 1000;
+          await delay(wait);
+          i--; continue;
+        }
+        if (!res.ok) throw new Error("Spotify search failed");
+        const data = await res.json();
+        const albums = data.albums?.items || [];
+
+        if (albums.length > 0) {
+          const best = albums[0];
+          newMatches[id] = {
+            uri: best.uri,
+            name: best.name,
+            artist: best.artists?.map(a => a.name).join(", ") || "",
+            url: best.external_urls?.spotify || "",
+            albumId: best.id
+          };
+        } else {
+          // Try a looser search without field qualifiers
+          const url2 = `${SPOTIFY_API}/search?type=album&limit=3&q=${encodeURIComponent(release.title)}`;
+          const res2 = await fetch(url2, { headers: { Authorization: `Bearer ${spotifyToken}` } });
+          const data2 = await res2.json();
+          const albums2 = data2.albums?.items || [];
+          if (albums2.length > 0) {
+            const best = albums2[0];
+            newMatches[id] = {
+              uri: best.uri, name: best.name,
+              artist: best.artists?.map(a => a.name).join(", ") || "",
+              url: best.external_urls?.spotify || "", albumId: best.id
+            };
+          } else {
+            newMatches[id] = null;
+          }
+        }
+      } catch (e) {
+        newMatches[id] = null;
+      }
+
+      setMatchProgress({ done: i + 1, total: entries.length });
+      setSpotifyMatches({ ...newMatches });
+      await delay(120); // rate limit courtesy
+    }
+
+    setSpotifyMatches(newMatches);
+    setMatching(false);
+  };
+
+  // ─── Create Spotify Playlist ───
+  const createPlaylist = async () => {
+    if (!spotifyToken || !spotifyUser) { alert("Connect Spotify first"); return; }
+    const matched = Object.entries(spotifyMatches).filter(([_, v]) => v !== null);
+    if (matched.length === 0) { alert("No Spotify matches found"); return; }
+
+    setCreating(true);
+    setPlaylistResult(null);
+
+    try {
+      // 1) Create playlist
+      const name = playlistName || `Crate Dig – ${year || "Mixed"}`;
+      const plRes = await fetch(`${SPOTIFY_API}/users/${spotifyUser.id}/playlists`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${spotifyToken}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ name, description: `Dug from Discogs via Crate Dig`, public: false })
+      });
+      if (!plRes.ok) throw new Error("Failed to create playlist");
+      const playlist = await plRes.json();
+
+      // 2) Get track URIs from each album (first track or all tracks)
+      const trackUris = [];
+      for (const [id, match] of matched) {
+        try {
+          const tRes = await fetch(`${SPOTIFY_API}/albums/${match.albumId}/tracks?limit=50`, {
+            headers: { Authorization: `Bearer ${spotifyToken}` }
+          });
+          if (tRes.ok) {
+            const tData = await tRes.json();
+            const uris = (tData.items || []).map(t => t.uri);
+            trackUris.push(...uris);
+          }
+          await delay(80);
+        } catch (e) { /* skip */ }
+      }
+
+      // 3) Add tracks in batches of 100
+      for (let i = 0; i < trackUris.length; i += 100) {
+        const batch = trackUris.slice(i, i + 100);
+        await fetch(`${SPOTIFY_API}/playlists/${playlist.id}/tracks`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${spotifyToken}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ uris: batch })
+        });
+        await delay(100);
+      }
+
+      setPlaylistResult({
+        url: playlist.external_urls?.spotify,
+        name: playlist.name,
+        trackCount: trackUris.length
+      });
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  // ─── Derived data ───
+  const selectedList = Object.entries(selected);
+  const matchedCount = Object.values(spotifyMatches).filter(v => v !== null).length;
+  const unmatchedEntries = selectedList.filter(([id]) => spotifyMatches[id] === null);
+  const allOnPageSelected = results.length > 0 && results.every(r => selected[r.id]);
+
+  // ─── Render ───
+  return (
+    <div>
+      {/* ═══ HEADER ═══ */}
+      <div className="header">
+        <div className="header-row">
+          <h1>Crate Dig <span>discogs → spotify</span></h1>
+          <div className="auth-status">
+            {discogsToken && <span className="badge badge-ok">DISCOGS ✓</span>}
+            {spotifyUser ? (
+              <span className="badge badge-spotify">SPOTIFY: {spotifyUser.display_name}</span>
+            ) : spotifyToken ? (
+              <span className="badge badge-spotify">SPOTIFY ✓</span>
+            ) : (
+              <span className="badge badge-off">SPOTIFY —</span>
+            )}
+            <button className="toggle-link" onClick={() => setShowSetup(!showSetup)}>
+              {showSetup ? "hide setup" : "setup"}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* ═══ SETUP ═══ */}
+      {showSetup && (
+        <div className="setup-panel fade-in">
+          <h2>API Setup</h2>
+          <div className="setup-grid">
+            <div className="setup-group">
+              <label>Discogs Personal Token</label>
+              <input
+                type="password"
+                value={discogsToken}
+                onChange={e => setDiscogsToken(e.target.value)}
+                placeholder="paste token here…"
+              />
+              <div className="hint">
+                Get one at <a href="https://www.discogs.com/settings/developers" target="_blank" rel="noopener" style={{color:'var(--amber-dim)'}}>discogs.com/settings/developers</a>
+              </div>
+            </div>
+            <div className="setup-group">
+              <label>Spotify Connection</label>
+              {spotifyUser ? (
+                <div style={{padding:'0.6rem 0'}}>
+                  <span className="badge badge-spotify" style={{fontSize:'0.8rem'}}>
+                    Connected as {spotifyUser.display_name}
+                  </span>
+                </div>
+              ) : (
+                <>
+                  <button className="btn btn-spotify" onClick={loginSpotify} style={{marginTop:'0.2rem'}}>
+                    Connect Spotify
+                  </button>
+                  <div className="hint">Uses OAuth — your credentials stay with Spotify</div>
+                </>
+              )}
+            </div>
+          </div>
+          {discogsToken && (spotifyUser || spotifyToken) && (
+            <div className="setup-actions">
+              <button className="btn btn-primary" onClick={() => setShowSetup(false)}>
+                Ready — start digging
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ═══ SEARCH ═══ */}
+      <div className="search-section">
+        <h2>Search Discogs</h2>
+        <div className="search-form">
+          <div className="field">
+            <label>Year</label>
+            <input value={year} onChange={e => setYear(e.target.value)} placeholder="1972" />
+          </div>
+          <div className="field">
+            <label>Search (optional)</label>
+            <input value={query} onChange={e => setQuery(e.target.value)} placeholder="artist, label, title…" />
+          </div>
+          <div className="field">
+            <label>Genre</label>
+            <select value={genre} onChange={e => setGenre(e.target.value)}>
+              <option value="">All Genres</option>
+              {GENRES.filter(Boolean).map(g => <option key={g} value={g}>{g}</option>)}
+            </select>
+          </div>
+          <div className="field">
+            <label>Country</label>
+            <input value={country} onChange={e => setCountry(e.target.value)} placeholder="US, UK, Japan…" />
+          </div>
+          <div className="field" style={{display:'flex',alignItems:'flex-end'}}>
+            <button
+              className="btn btn-primary"
+              onClick={() => searchDiscogs(1)}
+              disabled={loading}
+              style={{width:'100%'}}
+            >
+              {loading ? <><span className="spinner"></span>Searching…</> : "Search"}
+            </button>
+          </div>
+        </div>
+        {error && <div className="error-msg">{error}</div>}
+      </div>
+
+      {/* ═══ TABS ═══ */}
+      <div className="tabs">
+        <button className={`tab ${tab === 'search' ? 'active' : ''}`} onClick={() => setTab('search')}>
+          Results {pagination && <span className="count">{pagination.items?.toLocaleString()}</span>}
+        </button>
+        <button className={`tab ${tab === 'selected' ? 'active' : ''}`} onClick={() => setTab('selected')}>
+          Selected <span className="count">{selectedList.length}</span>
+        </button>
+        <button className={`tab ${tab === 'playlist' ? 'active' : ''}`} onClick={() => setTab('playlist')}>
+          Build Playlist
+        </button>
+      </div>
+
+      {/* ═══ SEARCH RESULTS TAB ═══ */}
+      {tab === 'search' && (
+        <div className="results fade-in">
+          {results.length > 0 && (
+            <div className="select-bar">
+              <button className="btn btn-sm" onClick={allOnPageSelected ? deselectAllOnPage : selectAllOnPage}>
+                {allOnPageSelected ? "Deselect page" : "Select all on page"}
+              </button>
+              {selectedList.length > 0 && (
+                <span style={{fontFamily:'var(--font-mono)',fontSize:'0.7rem',color:'var(--amber)'}}>
+                  {selectedList.length} selected total
+                </span>
+              )}
+            </div>
+          )}
+
+          {results.map((r, i) => {
+            const { artist, title } = parseTitle(r.title);
+            const isSelected = !!selected[r.id];
+            const match = spotifyMatches[r.id];
+            return (
+              <div
+                key={r.id}
+                className={`release-card ${isSelected ? 'selected' : ''}`}
+                onClick={() => toggleSelect(r)}
+                style={{ animationDelay: `${i * 30}ms` }}
+              >
+                <div className="release-check"><CheckIcon /></div>
+                {r.thumb ? (
+                  <img className="release-thumb" src={r.thumb} alt="" loading="lazy" />
+                ) : (
+                  <div className="release-thumb" style={{display:'flex',alignItems:'center',justifyContent:'center',fontSize:'1.2rem',color:'var(--border-light)'}}>♫</div>
+                )}
+                <div className="release-info">
+                  <h3>{artist ? <><span style={{color:'var(--amber)'}}>{artist}</span> — {title}</> : r.title}</h3>
+                  <div className="release-meta">
+                    {r.year && <span>{r.year}</span>}
+                    {r.country && <span>{r.country}</span>}
+                    {r.format && <span>{r.format.join(", ")}</span>}
+                    {r.genre && <span>{r.genre.join(", ")}</span>}
+                    {r.label && <span>{r.label[0]}</span>}
+                  </div>
+                </div>
+                <div className="release-actions" onClick={e => e.stopPropagation()}>
+                  {match === undefined ? null :
+                    match ? <span className="match-badge match-spotify">Spotify ✓</span> :
+                    <a className="yt-link" href={ytSearchUrl(artist, title)} target="_blank" rel="noopener">YouTube ↗</a>
+                  }
+                  {r.uri && (
+                    <a className="discogs-link" href={discogsUrl(r.uri)} target="_blank" rel="noopener">Discogs ↗</a>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+
+          {!loading && results.length === 0 && (
+            <div className="empty">
+              <span className="empty-icon">📦</span>
+              Set your search criteria and hit Search to start digging.
+            </div>
+          )}
+
+          {/* Pagination */}
+          {pagination && pagination.pages > 1 && (
+            <div className="pagination">
+              <button className="btn btn-sm" onClick={() => searchDiscogs(page - 1)} disabled={page <= 1 || loading}>
+                ← Prev
+              </button>
+              <span className="page-info">
+                Page {page} of {pagination.pages}
+              </span>
+              <button className="btn btn-sm" onClick={() => searchDiscogs(page + 1)} disabled={page >= pagination.pages || loading}>
+                Next →
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ═══ SELECTED TAB ═══ */}
+      {tab === 'selected' && (
+        <div className="results fade-in">
+          {selectedList.length === 0 ? (
+            <div className="empty">
+              <span className="empty-icon">🎯</span>
+              No releases selected yet. Go to Results and click to select.
+            </div>
+          ) : (
+            <>
+              <div className="select-bar">
+                <div style={{display:'flex',gap:'0.5rem'}}>
+                  <button className="btn btn-sm btn-spotify" onClick={matchToSpotify} disabled={matching || !spotifyToken}>
+                    {matching ? <><span className="spinner"></span>Matching ({matchProgress.done}/{matchProgress.total})</> : "Match to Spotify"}
+                  </button>
+                  <button className="btn btn-sm btn-danger" onClick={clearSelected}>Clear all</button>
+                </div>
+                <span style={{fontFamily:'var(--font-mono)',fontSize:'0.7rem',color:'var(--cream-dim)'}}>
+                  {matchedCount > 0 && `${matchedCount} matched · ${unmatchedEntries.length} not found`}
+                </span>
+              </div>
+
+              {matching && (
+                <div className="loading-bar">
+                  <div className="loading-bar-fill" style={{width: `${(matchProgress.done / matchProgress.total) * 100}%`}} />
+                </div>
+              )}
+
+              {selectedList.map(([id, release]) => {
+                const { artist, title } = parseTitle(release.title);
+                const match = spotifyMatches[id];
+                return (
+                  <div key={id} className="release-card selected" onClick={() => toggleSelect(release)}>
+                    <div className="release-check"><CheckIcon /></div>
+                    {release.thumb ? (
+                      <img className="release-thumb" src={release.thumb} alt="" loading="lazy" />
+                    ) : (
+                      <div className="release-thumb" style={{display:'flex',alignItems:'center',justifyContent:'center',fontSize:'1.2rem',color:'var(--border-light)'}}>♫</div>
+                    )}
+                    <div className="release-info">
+                      <h3>{artist ? <><span style={{color:'var(--amber)'}}>{artist}</span> — {title}</> : release.title}</h3>
+                      <div className="release-meta">
+                        {release.year && <span>{release.year}</span>}
+                        {release.country && <span>{release.country}</span>}
+                        {release.format && <span>{release.format.join(", ")}</span>}
+                      </div>
+                    </div>
+                    <div className="release-actions" onClick={e => e.stopPropagation()}>
+                      {match === undefined ? (
+                        <span className="match-badge match-none">not matched</span>
+                      ) : match ? (
+                        <a href={match.url} target="_blank" rel="noopener" className="match-badge match-spotify" style={{textDecoration:'none'}}>
+                          ♫ {match.artist} — {match.name} ↗
+                        </a>
+                      ) : (
+                        <a className="yt-link" href={ytSearchUrl(artist, title)} target="_blank" rel="noopener">
+                          YouTube search ↗
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </>
+          )}
+        </div>
+      )}
+
+      {/* ═══ PLAYLIST TAB ═══ */}
+      {tab === 'playlist' && (
+        <div className="results fade-in">
+          {selectedList.length === 0 ? (
+            <div className="empty">
+              <span className="empty-icon">🎵</span>
+              Select some releases first, then match them to Spotify.
+            </div>
+          ) : matchedCount === 0 && !matching ? (
+            <div className="empty">
+              <span className="empty-icon">🔍</span>
+              Go to the Selected tab and click "Match to Spotify" first.
+            </div>
+          ) : (
+            <div className="playlist-builder">
+              <h3>Create Spotify Playlist</h3>
+              <p style={{fontSize:'0.82rem',color:'var(--cream-dim)',marginBottom:'1rem'}}>
+                {matchedCount} of {selectedList.length} releases found on Spotify.
+                All tracks from matched albums will be added.
+              </p>
+              <div className="playlist-input-row">
+                <input
+                  value={playlistName}
+                  onChange={e => setPlaylistName(e.target.value)}
+                  placeholder={`Crate Dig – ${year || "Mixed"}`}
+                />
+                <button
+                  className="btn btn-spotify"
+                  onClick={createPlaylist}
+                  disabled={creating || matchedCount === 0}
+                >
+                  {creating ? <><span className="spinner"></span>Creating…</> : "Create Playlist"}
+                </button>
+              </div>
+
+              {playlistResult && (
+                <div className="success-panel">
+                  <p style={{fontSize:'0.9rem',marginBottom:'0.5rem',color:'var(--green)'}}>
+                    ✓ Playlist created — {playlistResult.trackCount} tracks added
+                  </p>
+                  <a href={playlistResult.url} target="_blank" rel="noopener">
+                    Open "{playlistResult.name}" in Spotify ↗
+                  </a>
+                </div>
+              )}
+
+              {/* Unmatched releases with YouTube links */}
+              {unmatchedEntries.length > 0 && (
+                <div className="unmatched-section">
+                  <h4>Not on Spotify — YouTube links ({unmatchedEntries.length})</h4>
+                  {unmatchedEntries.map(([id, release]) => {
+                    const { artist, title } = parseTitle(release.title);
+                    return (
+                      <div key={id} className="unmatched-item">
+                        <span>{artist ? <><strong style={{color:'var(--cream)'}}>{artist}</strong> — {title}</> : release.title}</span>
+                        <div style={{display:'flex',gap:'0.4rem'}}>
+                          <a className="yt-link" href={ytSearchUrl(artist, title)} target="_blank" rel="noopener">YouTube ↗</a>
+                          {release.uri && <a className="discogs-link" href={discogsUrl(release.uri)} target="_blank" rel="noopener">Discogs ↗</a>}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('app')).render(<App />);
+</script>
+</body>
+</html>
