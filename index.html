@@ -213,11 +213,14 @@
   }
   .search-form {
     display: grid;
-    grid-template-columns: 100px 1fr 140px 140px 120px;
+    grid-template-columns: 100px 1fr 140px 160px 140px 120px;
     gap: 0.6rem;
     align-items: end;
   }
-  @media (max-width: 780px) {
+  @media (max-width: 900px) {
+    .search-form { grid-template-columns: 1fr 1fr 1fr; }
+  }
+  @media (max-width: 580px) {
     .search-form { grid-template-columns: 1fr 1fr; }
   }
   .field label {
@@ -695,6 +698,7 @@ function App() {
   // Search
   const [year, setYear] = useState("1972");
   const [genre, setGenre] = useState("");
+  const [style, setStyle] = useState("");
   const [query, setQuery] = useState("");
   const [country, setCountry] = useState("");
   const [results, setResults] = useState([]);
@@ -803,6 +807,7 @@ function App() {
       url.searchParams.set("page", String(p));
       if (year) url.searchParams.set("year", year);
       if (genre) url.searchParams.set("genre", genre);
+      if (style) url.searchParams.set("style", style);
       if (query) url.searchParams.set("q", query);
       if (country) url.searchParams.set("country", country);
 
@@ -1084,9 +1089,16 @@ function App() {
           </div>
           <div className="field">
             <label>Genre</label>
-            <select value={genre} onChange={e => setGenre(e.target.value)}>
+            <select value={genre} onChange={e => { setGenre(e.target.value); setStyle(""); }}>
               <option value="">All Genres</option>
               {GENRES.filter(Boolean).map(g => <option key={g} value={g}>{g}</option>)}
+            </select>
+          </div>
+          <div className="field">
+            <label>Style</label>
+            <select value={style} onChange={e => setStyle(e.target.value)} disabled={!genre}>
+              <option value="">{genre ? "All Styles" : "Select genre first"}</option>
+              {genre && GENRE_STYLES[genre] && GENRE_STYLES[genre].map(s => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>
           <div className="field">
