@@ -993,6 +993,12 @@ function App() {
       try {
         const url = `${SPOTIFY_API}/search?type=album&limit=3&q=${encodeURIComponent(q)}`;
         const res = await fetch(url, { headers: { Authorization: `Bearer ${spotifyToken}` } });
+        if (res.status === 401) {
+          setSpotifyToken(null);
+          setSpotifyUser(null);
+          setError("Spotify session expired. Please reconnect Spotify and try again.");
+          break;
+        }
         if (res.status === 429) {
           const wait = parseInt(res.headers.get("Retry-After") || "2") * 1000;
           await delay(wait);
@@ -1061,7 +1067,15 @@ function App() {
         },
         body: JSON.stringify({ name, description: `Dug from Discogs via Crate Digger`, public: false })
       });
-      if (!plRes.ok) throw new Error("Failed to create playlist");
+      if (!plRes.ok) {
+        const errBody = await plRes.text();
+        if (plRes.status === 401) {
+          setSpotifyToken(null);
+          setSpotifyUser(null);
+          throw new Error("Spotify session expired. Please reconnect Spotify and try again.");
+        }
+        throw new Error("Failed to create playlist (" + plRes.status + "): " + errBody.slice(0, 200));
+      }
       const playlist = await plRes.json();
 
       // 2) Get track URIs from each album (first track or all tracks)
@@ -1126,7 +1140,7 @@ function App() {
             ) : spotifyToken ? (
               <span className="badge badge-spotify">SPOTIFY ✓</span>
             ) : (
-              <span className="badge badge-off">SPOTIFY —</span>
+              <button className="btn btn-sm btn-spotify" onClick={loginSpotify} style={{fontSize:'0.65rem',padding:'0.2rem 0.5rem'}}>Connect Spotify</button>
             )}
             <button className="toggle-link" onClick={() => setShowSetup(!showSetup)}>
               {showSetup ? "hide setup" : "setup"}
