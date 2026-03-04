@@ -215,7 +215,7 @@
   }
   .search-form {
     display: grid;
-    grid-template-columns: 100px 1fr 140px 160px 140px 120px;
+    grid-template-columns: 80px 1fr 140px 160px;
     gap: 0.6rem;
     align-items: end;
   }
@@ -810,6 +810,9 @@ function App() {
   const [style, setStyle] = useState("");
   const [query, setQuery] = useState("");
   const [country, setCountry] = useState("");
+  const [label, setLabel] = useState("");
+  const [sortBy, setSortBy] = useState("");
+  const [sortOrder, setSortOrder] = useState("desc");
   const [results, setResults] = useState([]);
   const [pagination, setPagination] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -917,6 +920,11 @@ function App() {
       if (style) url.searchParams.set("style", style);
       if (query) url.searchParams.set("q", query);
       if (country) url.searchParams.set("country", country);
+      if (label) url.searchParams.set("label", label);
+      if (sortBy) {
+        url.searchParams.set("sort", sortBy);
+        url.searchParams.set("sort_order", sortOrder);
+      }
 
       const res = await fetch(url.toString(), {
         headers: { "User-Agent": "CrateDig/1.0" }
@@ -1207,6 +1215,27 @@ function App() {
             <label>Country</label>
             <input value={country} onChange={e => setCountry(e.target.value)} placeholder="US, UK, Japan…" />
           </div>
+          <div className="field">
+            <label>Label</label>
+            <input value={label} onChange={e => setLabel(e.target.value)} placeholder="Domino, Warp, Blue Note…" />
+          </div>
+          <div className="field">
+            <label>Sort by</label>
+            <select value={sortBy} onChange={e => setSortBy(e.target.value)}>
+              <option value="">Relevance</option>
+              <option value="year">Year</option>
+              <option value="title">Title</option>
+            </select>
+          </div>
+          {sortBy && (
+            <div className="field">
+              <label>Order</label>
+              <select value={sortOrder} onChange={e => setSortOrder(e.target.value)}>
+                <option value="desc">{sortBy === 'year' ? 'Newest first' : 'Z → A'}</option>
+                <option value="asc">{sortBy === 'year' ? 'Oldest first' : 'A → Z'}</option>
+              </select>
+            </div>
+          )}
           <div className="field" style={{display:'flex',alignItems:'flex-end'}}>
             <button
               className="btn btn-primary"
