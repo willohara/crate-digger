@@ -608,7 +608,7 @@ const { useState, useEffect, useCallback, useRef } = React;
    ═══════════════════════════════════════════════════════════════ */
 const SPOTIFY_CLIENT_ID = "2ab0a937c9404edc89d76ce1e81d735d";
 const REDIRECT_URI = "https://willohara.github.io/crate-digger/";
-const DISCOGS_API = "https://api.discogs.com/database/search";
+const DISCOGS_API = "https://crate-digger.willohara21.workers.dev";
 const SPOTIFY_API = "https://api.spotify.com/v1";
 const SPOTIFY_AUTH = "https://accounts.spotify.com/authorize";
 const SCOPES = "playlist-modify-public playlist-modify-private user-read-private";
@@ -798,7 +798,6 @@ function CheckIcon() {
    ═══════════════════════════════════════════════════════════════ */
 function App() {
   // ─── State ─── 
-  const [discogsToken, setDiscogsToken] = useState("");
   const [spotifyToken, setSpotifyToken] = useState(null);
   const [spotifyUser, setSpotifyUser] = useState(null);
   const [showSetup, setShowSetup] = useState(true);
@@ -908,7 +907,6 @@ function App() {
     setPage(p);
     try {
       const url = new URL(DISCOGS_API);
-      if (discogsToken) url.searchParams.set("token", discogsToken);
       url.searchParams.set("type", "master");
       url.searchParams.set("per_page", "20");
       url.searchParams.set("page", String(p));
@@ -1136,7 +1134,7 @@ function App() {
         <div className="header-row">
           <h1>Crate Digger <span>discogs → spotify</span></h1>
           <div className="auth-status">
-            {discogsToken ? <span className="badge badge-ok">DISCOGS ✓</span> : <span className="badge badge-off">DISCOGS (no token)</span>}
+            <span className="badge badge-ok">DISCOGS ✓</span>
             {spotifyUser ? (
               <span className="badge badge-spotify">SPOTIFY: {spotifyUser.display_name}</span>
             ) : spotifyToken ? (
@@ -1156,18 +1154,6 @@ function App() {
         <div className="setup-panel fade-in">
           <h2>API Setup</h2>
           <div className="setup-grid">
-            <div className="setup-group">
-              <label>Discogs Token (optional)</label>
-              <input
-                type="password"
-                value={discogsToken}
-                onChange={e => setDiscogsToken(e.target.value)}
-                placeholder="optional — increases rate limit…"
-              />
-              <div className="hint">
-                Works without a token (25 req/min). Add one for 60 req/min from <a href="https://www.discogs.com/settings/developers" target="_blank" rel="noopener" style={{color:'var(--amber-dim)'}}>discogs.com/settings/developers</a>
-              </div>
-            </div>
             <div className="setup-group">
               <label>Spotify Connection</label>
               {spotifyUser ? (
