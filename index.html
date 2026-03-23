@@ -1168,7 +1168,16 @@ function App() {
     else if (field === 'country') setCountry("");
     else if (field === 'credit') setCredit("");
     else if (field === 'track') setTrack("");
-    setFilterTrigger(f => f + 1);
+
+    // Check if any filters will remain after this removal
+    const remaining = activeFilters.filter(f => f.field !== field);
+    if (remaining.length === 0) {
+      setResults([]);
+      setPagination(null);
+      setHasSearched(false);
+    } else {
+      setFilterTrigger(f => f + 1);
+    }
   };
 
   const clearAllFilters = () => {
@@ -1304,6 +1313,32 @@ function App() {
       }
       const data = await res.json();
       let mainResults = data.results || [];
+
+      // If credit search returned 0 results, try as artist name search instead
+      if (useCredit && mainResults.length === 0) {
+        const fallbackUrl = new URL(DISCOGS_API);
+        fallbackUrl.searchParams.set("type", "master");
+        fallbackUrl.searchParams.set("per_page", "20");
+        fallbackUrl.searchParams.set("page", String(p));
+        fallbackUrl.searchParams.set("artist", credit);
+        if (year) fallbackUrl.searchParams.set("year", year);
+        if (genre) fallbackUrl.searchParams.set("genre", genre);
+        if (style) fallbackUrl.searchParams.set("style", style);
+        if (country) fallbackUrl.searchParams.set("country", country);
+        if (label) fallbackUrl.searchParams.set("label", label);
+        if (sortBy) {
+          fallbackUrl.searchParams.set("sort", sortBy);
+          fallbackUrl.searchParams.set("sort_order", sortOrder);
+        }
+        const fallbackRes = await fetch(fallbackUrl.toString());
+        if (fallbackRes.ok) {
+          const fallbackData = await fallbackRes.json();
+          mainResults = fallbackData.results || [];
+          if (mainResults.length > 0) {
+            setPagination(fallbackData.pagination || null);
+          }
+        }
+      }
 
       // If credit search returned releases, deduplicate by master_id
       if (useCredit && mainResults.length > 0) {
