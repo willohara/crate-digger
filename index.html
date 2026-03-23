@@ -956,23 +956,58 @@ function parseTitle(t) {
   return { artist, title: t.slice(idx + 3).trim() };
 }
 
-function ytSearchUrl(artist, title) {
-  const q = encodeURIComponent(`${artist} ${title}`.trim());
+// --- Search query helpers ---
+// isSelfTitled: "Wormwood - Wormwood" → true
+function isSelfTitled(artist, title) {
+  if (!artist || !title) return false;
+  return artist.trim().toLowerCase() === title.trim().toLowerCase();
+}
+
+// Build a base search string with year + self-titled hint
+function buildSearchQuery(artist, title, year) {
+  let parts = [artist, title].filter(Boolean);
+  if (year) parts.push(String(year));
+  if (isSelfTitled(artist, title)) parts.push("album");
+  return parts.join(" ").trim();
+}
+
+// YouTube gets "full album" appended — matches how obscure albums are typically uploaded
+function buildYtAlbumQuery(artist, title, year) {
+  let parts = [artist, title].filter(Boolean);
+  if (year) parts.push(String(year));
+  parts.push("full album");
+  return parts.join(" ").trim();
+}
+
+// Track-level: artist + track title + year (no "album" hint)
+function buildTrackQuery(artist, trackTitle, year) {
+  let parts = [artist, trackTitle].filter(Boolean);
+  if (year) parts.push(String(year));
+  return parts.join(" ").trim();
+}
+
+function ytSearchUrl(artist, title, year) {
+  const q = encodeURIComponent(buildYtAlbumQuery(artist, title, year));
   return `https://www.youtube.com/results?search_query=${q}`;
 }
 
-function spotifySearchUrl(artist, title) {
-  const q = encodeURIComponent(`${artist} ${title}`.trim());
+function ytTrackSearchUrl(artist, trackTitle, year) {
+  const q = encodeURIComponent(buildTrackQuery(artist, trackTitle, year));
+  return `https://www.youtube.com/results?search_query=${q}`;
+}
+
+function spotifySearchUrl(artist, title, year) {
+  const q = encodeURIComponent(buildSearchQuery(artist, title, year));
   return `spotify:search:${q}`;
 }
-function spotifyWebSearchUrl(artist, title) {
-  const q = encodeURIComponent(`${artist} ${title}`.trim());
+function spotifyWebSearchUrl(artist, title, year) {
+  const q = encodeURIComponent(buildSearchQuery(artist, title, year));
   return `https://open.spotify.com/search/${q}`;
 }
 
-function openSpotifySearch(artist, title, e) {
+function openSpotifySearch(artist, title, year, e) {
   if (e) e.preventDefault();
-  const q = encodeURIComponent(`${artist} ${title}`.trim());
+  const q = encodeURIComponent(buildSearchQuery(artist, title, year));
   const appUri = `spotify:search:${q}`;
   const webUrl = `https://open.spotify.com/search/${q}`;
   const start = Date.now();
@@ -988,13 +1023,13 @@ function openSpotifySearch(artist, title, e) {
   }, 800);
 }
 
-function appleMusicSearchUrl(artist, title) {
-  const q = encodeURIComponent(`${artist} ${title}`.trim());
+function appleMusicSearchUrl(artist, title, year) {
+  const q = encodeURIComponent(buildSearchQuery(artist, title, year));
   return `https://music.apple.com/us/search?term=${q}`;
 }
 
-function ytMusicSearchUrl(artist, title) {
-  const q = encodeURIComponent(`${artist} ${title}`.trim());
+function ytMusicSearchUrl(artist, title, year) {
+  const q = encodeURIComponent(buildSearchQuery(artist, title, year));
   return `https://music.youtube.com/search?q=${q}`;
 }
 
@@ -1778,10 +1813,10 @@ function App() {
                   </div>
                 </div>
                 <div className="release-actions" onClick={e => e.stopPropagation()}>
-                  <a className="spotify-link" href="#" onClick={(e) => openSpotifySearch(artist, title, e)} title="Opens app if installed, otherwise web player">♫ Spotify ↗</a>
-                  <a className="apple-link" href={appleMusicSearchUrl(artist, title)} target="_blank" rel="noopener">♫ Apple Music ↗</a>
-                  <a className="ytmusic-link" href={ytMusicSearchUrl(artist, title)} target="_blank" rel="noopener">♬ YT Music ↗</a>
-                  <a className="yt-link" href={ytSearchUrl(artist, title)} target="_blank" rel="noopener">▶ YouTube ↗</a>
+                  <a className="spotify-link" href="#" onClick={(e) => openSpotifySearch(artist, title, r.year, e)} title="Opens app if installed, otherwise web player">♫ Spotify ↗</a>
+                  <a className="apple-link" href={appleMusicSearchUrl(artist, title, r.year)} target="_blank" rel="noopener">♫ Apple Music ↗</a>
+                  <a className="ytmusic-link" href={ytMusicSearchUrl(artist, title, r.year)} target="_blank" rel="noopener">♬ YT Music ↗</a>
+                  <a className="yt-link" href={ytSearchUrl(artist, title, r.year)} target="_blank" rel="noopener">▶ YouTube ↗</a>
                   {r.uri && (
                     <a className="discogs-link" href={discogsUrl(r.uri)} target="_blank" rel="noopener">Discogs ↗</a>
                   )}
@@ -1803,8 +1838,8 @@ function App() {
                               <span className="track-pos">{t.position}</span>
                               <span className="track-title meta-click" onClick={(e) => { e.stopPropagation(); searchByTrack(t.title); }}>{t.title}</span>
                               {t.duration && <span className="track-dur">{t.duration}</span>}
-                              <a className="yt-link" href={ytSearchUrl(artist, t.title)} target="_blank" rel="noopener" onClick={e => e.stopPropagation()} style={{fontSize:'0.55rem',padding:'0.1rem 0.25rem',marginLeft:'0.3rem'}}>▶ YT</a>
-                              <a className="spotify-link" href="#" onClick={(e) => { e.stopPropagation(); openSpotifySearch(artist, t.title, e); }} style={{fontSize:'0.55rem',padding:'0.1rem 0.25rem'}}>♫</a>
+                              <a className="yt-link" href={ytTrackSearchUrl(artist, t.title, r.year)} target="_blank" rel="noopener" onClick={e => e.stopPropagation()} style={{fontSize:'0.55rem',padding:'0.1rem 0.25rem',marginLeft:'0.3rem'}}>▶ YT</a>
+                              <a className="spotify-link" href="#" onClick={(e) => { e.stopPropagation(); openSpotifySearch(artist, t.title, r.year, e); }} style={{fontSize:'0.55rem',padding:'0.1rem 0.25rem'}}>♫</a>
                             </div>
                           )) : <div style={{color:'var(--paper-dim)',fontSize:'0.65rem'}}>No tracklist available</div>}
                         </div>
@@ -1910,7 +1945,7 @@ function App() {
                           ♫ {match.artist} — {match.name} ↗
                         </a>
                       ) : (
-                        <a className="yt-link" href={ytSearchUrl(artist, title)} target="_blank" rel="noopener">
+                        <a className="yt-link" href={ytSearchUrl(artist, title, release.year)} target="_blank" rel="noopener">
                           YouTube search ↗
                         </a>
                       )}
@@ -1979,10 +2014,10 @@ function App() {
                       <div key={id} className="unmatched-item">
                         <span>{artist ? <><strong style={{color:'var(--cream)'}}>{artist}</strong> — {title}</> : release.title}</span>
                         <div style={{display:'flex',gap:'0.4rem',flexWrap:'wrap'}}>
-                          <a className="spotify-link" href="#" onClick={(e) => openSpotifySearch(artist, title, e)} title="Opens app if installed, otherwise web player">♫ Spotify ↗</a>
-                          <a className="apple-link" href={appleMusicSearchUrl(artist, title)} target="_blank" rel="noopener">Apple Music ↗</a>
-                          <a className="ytmusic-link" href={ytMusicSearchUrl(artist, title)} target="_blank" rel="noopener">YT Music ↗</a>
-                          <a className="yt-link" href={ytSearchUrl(artist, title)} target="_blank" rel="noopener">YouTube ↗</a>
+                          <a className="spotify-link" href="#" onClick={(e) => openSpotifySearch(artist, title, release.year, e)} title="Opens app if installed, otherwise web player">♫ Spotify ↗</a>
+                          <a className="apple-link" href={appleMusicSearchUrl(artist, title, release.year)} target="_blank" rel="noopener">Apple Music ↗</a>
+                          <a className="ytmusic-link" href={ytMusicSearchUrl(artist, title, release.year)} target="_blank" rel="noopener">YT Music ↗</a>
+                          <a className="yt-link" href={ytSearchUrl(artist, title, release.year)} target="_blank" rel="noopener">YouTube ↗</a>
                           {release.uri && <a className="discogs-link" href={discogsUrl(release.uri)} target="_blank" rel="noopener">Discogs ↗</a>}
                         </div>
                       </div>
