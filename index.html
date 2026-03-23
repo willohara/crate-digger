@@ -251,15 +251,24 @@
   }
   .search-form {
     display: grid;
-    grid-template-columns: 80px 1fr 140px 160px;
+    grid-template-columns: 70px 1fr 130px 140px;
     gap: 0.5rem;
     align-items: end;
   }
+  .search-form-row2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr 100px;
+    gap: 0.5rem;
+    align-items: end;
+    margin-top: 0.5rem;
+  }
   @media (max-width: 900px) {
     .search-form { grid-template-columns: 1fr 1fr 1fr; }
+    .search-form-row2 { grid-template-columns: 1fr 1fr 1fr; }
   }
   @media (max-width: 580px) {
     .search-form { grid-template-columns: 1fr 1fr; }
+    .search-form-row2 { grid-template-columns: 1fr 1fr; }
   }
   .field label {
     font-family: var(--font-typed);
@@ -1602,17 +1611,19 @@ function App() {
               {genre && GENRE_STYLES[genre] && GENRE_STYLES[genre].map(s => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>
+        </div>
+        <div className="search-form-row2">
           <div className="field">
             <label>Country</label>
-            <input value={country} onChange={e => setCountry(e.target.value)} placeholder="US, UK, Japan…" />
+            <input value={country} onChange={e => setCountry(e.target.value)} placeholder="US, UK…" />
           </div>
           <div className="field">
             <label>Label</label>
-            <input value={label} onChange={e => setLabel(e.target.value)} placeholder="Domino, Warp, Blue Note…" />
+            <input value={label} onChange={e => setLabel(e.target.value)} placeholder="Domino, Warp…" />
           </div>
           <div className="field">
             <label>Credited musician</label>
-            <input value={credit} onChange={e => setCredit(e.target.value)} placeholder="Damon Albarn, Jah Wobble…" />
+            <input value={credit} onChange={e => setCredit(e.target.value)} placeholder="Damon Albarn…" />
           </div>
           <div className="field">
             <label>Sort by</label>
@@ -1622,21 +1633,6 @@ function App() {
               <option value="title">Title</option>
             </select>
           </div>
-          {sortBy && (
-            <div className="field">
-              <label>Order</label>
-              <select value={sortOrder} onChange={e => setSortOrder(e.target.value)}>
-                <option value="desc">{sortBy === 'year' ? 'Newest first' : 'Z → A'}</option>
-                <option value="asc">{sortBy === 'year' ? 'Oldest first' : 'A → Z'}</option>
-              </select>
-            </div>
-          )}
-          <div className="field" style={{display:'flex',alignItems:'flex-end',gap:'0.3rem'}}>
-            <label style={{display:'flex',alignItems:'center',gap:'0.3rem',cursor:'pointer',fontSize:'0.6rem',whiteSpace:'nowrap'}}>
-              <input type="checkbox" checked={includeOrphans} onChange={e => setIncludeOrphans(e.target.checked)} style={{accentColor:'var(--cardboard)'}} />
-              Include rare releases
-            </label>
-          </div>
           <div className="field" style={{display:'flex',alignItems:'flex-end'}}>
             <button
               className="btn btn-primary"
@@ -1644,7 +1640,7 @@ function App() {
               disabled={loading}
               style={{width:'100%'}}
             >
-              {loading ? <><span className="spinner"></span>Searching…</> : "Dig"}
+              {loading ? <><span className="spinner"></span>…</> : "Dig"}
             </button>
           </div>
         </div>
