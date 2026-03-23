@@ -257,7 +257,7 @@
   }
   .search-form-row2 {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr 1fr 100px;
+    grid-template-columns: 1fr 1fr 1fr 1fr 1fr 90px;
     gap: 0.5rem;
     align-items: end;
     margin-top: 0.5rem;
@@ -1029,6 +1029,7 @@ function App() {
   const [country, setCountry] = useState("");
   const [label, setLabel] = useState("");
   const [credit, setCredit] = useState("");
+  const [track, setTrack] = useState("");
   const [sortBy, setSortBy] = useState("");
   const [sortOrder, setSortOrder] = useState("desc");
   const [includeOrphans, setIncludeOrphans] = useState(true);
@@ -1144,6 +1145,20 @@ function App() {
     setFilterTrigger(f => f + 1);
   };
 
+  const searchByTrack = (trackTitle) => {
+    setTrack(trackTitle);
+    setQuery("");
+    setCredit("");
+    setLabel("");
+    setCountry("");
+    setStyle("");
+    setYear("");
+    setGenre("");
+    setSortBy("");
+    setSortOrder("desc");
+    setFilterTrigger(f => f + 1);
+  };
+
   const removeFilter = (field) => {
     if (field === 'query') setQuery("");
     else if (field === 'year') setYear("");
@@ -1152,6 +1167,7 @@ function App() {
     else if (field === 'label') setLabel("");
     else if (field === 'country') setCountry("");
     else if (field === 'credit') setCredit("");
+    else if (field === 'track') setTrack("");
     setFilterTrigger(f => f + 1);
   };
 
@@ -1162,6 +1178,7 @@ function App() {
     setLabel("");
     setCountry("");
     setCredit("");
+    setTrack("");
     setQuery("");
     setSortBy("");
     setSortOrder("desc");
@@ -1180,6 +1197,7 @@ function App() {
   if (label) activeFilters.push({ field: 'label', value: label });
   if (country) activeFilters.push({ field: 'country', value: country });
   if (credit) activeFilters.push({ field: 'credit', value: credit });
+  if (track) activeFilters.push({ field: 'track', value: track });
 
   // Build description string
   const filterDesc = activeFilters.length > 0
@@ -1273,6 +1291,7 @@ function App() {
       if (country) url.searchParams.set("country", country);
       if (label) url.searchParams.set("label", label);
       if (credit) url.searchParams.set("credit", credit);
+      if (track) url.searchParams.set("track", track);
       if (sortBy) {
         url.searchParams.set("sort", sortBy);
         url.searchParams.set("sort_order", sortOrder);
@@ -1626,6 +1645,10 @@ function App() {
             <input value={credit} onChange={e => setCredit(e.target.value)} placeholder="Damon Albarn…" />
           </div>
           <div className="field">
+            <label>Track title</label>
+            <input value={track} onChange={e => setTrack(e.target.value)} placeholder="Sister Ray…" />
+          </div>
+          <div className="field">
             <label>Sort by</label>
             <select value={sortBy} onChange={e => setSortBy(e.target.value)}>
               <option value="">Relevance</option>
@@ -1743,7 +1766,7 @@ function App() {
                           {d.tracklist.length > 0 ? d.tracklist.map((t, ti) => (
                             <div key={ti} className="track-row">
                               <span className="track-pos">{t.position}</span>
-                              <span className="track-title">{t.title}</span>
+                              <span className="track-title meta-click" onClick={(e) => { e.stopPropagation(); searchByTrack(t.title); }}>{t.title}</span>
                               {t.duration && <span className="track-dur">{t.duration}</span>}
                             </div>
                           )) : <div style={{color:'var(--paper-dim)',fontSize:'0.65rem'}}>No tracklist available</div>}
