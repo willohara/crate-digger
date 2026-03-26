@@ -251,24 +251,54 @@
   }
   .search-form {
     display: grid;
-    grid-template-columns: 70px 1fr 1fr 130px 140px;
+    grid-template-columns: 70px 1fr 130px 140px 90px;
     gap: 0.5rem;
     align-items: end;
   }
-  .search-form-row2 {
+  .search-form-advanced {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr 1fr 90px 90px 90px;
+    grid-template-columns: 1fr 1fr 1fr 1fr 1fr 90px 90px;
     gap: 0.5rem;
     align-items: end;
     margin-top: 0.5rem;
+    animation: fadeIn 0.15s ease-out;
   }
   @media (max-width: 900px) {
     .search-form { grid-template-columns: 1fr 1fr 1fr; }
-    .search-form-row2 { grid-template-columns: 1fr 1fr 1fr; }
+    .search-form-advanced { grid-template-columns: 1fr 1fr 1fr; }
   }
   @media (max-width: 580px) {
     .search-form { grid-template-columns: 1fr 1fr; }
-    .search-form-row2 { grid-template-columns: 1fr 1fr; }
+    .search-form-advanced { grid-template-columns: 1fr 1fr; }
+  }
+  .advanced-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-top: 0.5rem;
+  }
+  .advanced-toggle-btn {
+    background: none;
+    border: none;
+    color: var(--paper-dim);
+    font-family: var(--font-typed);
+    font-size: 0.65rem;
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    text-decoration-style: dashed;
+    text-decoration-color: var(--border-light);
+    padding: 0;
+    transition: color 0.1s;
+  }
+  .advanced-toggle-btn:hover { color: var(--paper); text-decoration-color: var(--cardboard-dark); }
+  .advanced-count {
+    font-family: var(--font-typed);
+    font-size: 0.55rem;
+    background: var(--cardboard-dark);
+    color: var(--ink);
+    padding: 0.08rem 0.3rem;
+    border-radius: 1px;
   }
   .field label {
     font-family: var(--font-typed);
@@ -1292,6 +1322,7 @@ function App() {
 
   // Tab
   const [tab, setTab] = useState("search");
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   // ─── PKCE Helpers ───
   function generateCodeVerifier(len) {
@@ -1375,8 +1406,8 @@ function App() {
   const applyFilter = (field, value) => {
     if (field === 'genre') { setGenre(value); setStyle(""); }
     else if (field === 'style') { setStyle(value); }
-    else if (field === 'label') { setLabel(value); }
-    else if (field === 'country') { setCountry(value); }
+    else if (field === 'label') { setLabel(value); setShowAdvanced(true); }
+    else if (field === 'country') { setCountry(value); setShowAdvanced(true); }
     // If we're in an artist ID search, convert to a text credit search
     // since the artist releases endpoint doesn't support genre/style/etc filters
     if (artistIdSearch) {
@@ -2270,10 +2301,6 @@ function App() {
             <input value={artistSearch} onChange={e => setArtistSearch(e.target.value)} placeholder="Pink Floyd…" />
           </div>
           <div className="field">
-            <label>Release title</label>
-            <input value={releaseTitle} onChange={e => setReleaseTitle(e.target.value)} placeholder="Meddle…" />
-          </div>
-          <div className="field">
             <label>Genre</label>
             <select value={genre} onChange={e => { setGenre(e.target.value); setStyle(""); }}>
               <option value="">All Genres</option>
@@ -2287,43 +2314,12 @@ function App() {
               {genre && GENRE_STYLES[genre] && GENRE_STYLES[genre].map(s => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>
-        </div>
-        <div className="search-form-row2">
-          <div className="field">
-            <label>Country</label>
-            <input value={country} onChange={e => setCountry(e.target.value)} placeholder="US, UK…" />
-          </div>
-          <div className="field">
-            <label>Label</label>
-            <input value={label} onChange={e => setLabel(e.target.value)} placeholder="Domino, Warp…" />
-          </div>
-          <div className="field">
-            <label>Credited musician</label>
-            <input value={credit} onChange={e => setCredit(e.target.value)} placeholder="Damon Albarn…" />
-          </div>
-          <div className="field">
-            <label>Track title</label>
-            <input value={track} onChange={e => setTrack(e.target.value)} placeholder="Sister Ray…" />
-          </div>
-          <div className="field">
-            <label>Cat #</label>
-            <input value={catno} onChange={e => setCatno(e.target.value)} placeholder="CAD 3705" />
-          </div>
-          <div className="field">
-            <label>Sort by</label>
-            <select value={sortBy} onChange={e => setSortBy(e.target.value)}>
-              <option value="">Relevance</option>
-              <option value="year">Year</option>
-              <option value="title">Title</option>
-            </select>
-          </div>
           <div className="field" style={{display:'flex',alignItems:'flex-end'}}>
             <button
               className="btn btn-primary"
               onClick={() => {
                 setArtistIdSearch(null);
                 if (credit.trim()) {
-                  // Resolve credit text to a precise artist entity first
                   resolveArtistCredit();
                 } else {
                   searchDiscogs(1);
@@ -2336,6 +2332,54 @@ function App() {
             </button>
           </div>
         </div>
+
+        {/* Advanced search toggle */}
+        <div className="advanced-toggle">
+          <button className="advanced-toggle-btn" onClick={() => setShowAdvanced(!showAdvanced)}>
+            {showAdvanced ? "▾ fewer options" : "▸ more options"}
+          </button>
+          {!showAdvanced && (() => {
+            const advCount = [releaseTitle, country, label, credit, track, catno, sortBy].filter(Boolean).length;
+            return advCount > 0 ? <span className="advanced-count">{advCount} active</span> : null;
+          })()}
+        </div>
+
+        {showAdvanced && (
+          <div className="search-form-advanced">
+            <div className="field">
+              <label>Release title</label>
+              <input value={releaseTitle} onChange={e => setReleaseTitle(e.target.value)} placeholder="Meddle…" />
+            </div>
+            <div className="field">
+              <label>Country</label>
+              <input value={country} onChange={e => setCountry(e.target.value)} placeholder="US, UK…" />
+            </div>
+            <div className="field">
+              <label>Label</label>
+              <input value={label} onChange={e => setLabel(e.target.value)} placeholder="Domino, Warp…" />
+            </div>
+            <div className="field">
+              <label>Credited musician</label>
+              <input value={credit} onChange={e => setCredit(e.target.value)} placeholder="Damon Albarn…" />
+            </div>
+            <div className="field">
+              <label>Track title</label>
+              <input value={track} onChange={e => setTrack(e.target.value)} placeholder="Sister Ray…" />
+            </div>
+            <div className="field">
+              <label>Cat #</label>
+              <input value={catno} onChange={e => setCatno(e.target.value)} placeholder="CAD 3705" />
+            </div>
+            <div className="field">
+              <label>Sort by</label>
+              <select value={sortBy} onChange={e => setSortBy(e.target.value)}>
+                <option value="">Relevance</option>
+                <option value="year">Year</option>
+                <option value="title">Title</option>
+              </select>
+            </div>
+          </div>
+        )}
         {error && <div className="error-msg">{error}</div>}
       </div>
 
