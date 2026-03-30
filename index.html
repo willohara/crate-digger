@@ -1031,6 +1031,22 @@
     border-color: #1da0c3;
   }
 
+  /* ─── Bandcamp-sourced result cards ─── */
+  .release-card.bc-source {
+    border-left: 2px solid #629aa9;
+  }
+  .bc-source-badge {
+    font-family: var(--font-typed);
+    font-size: 0.48rem;
+    background: #1a2a30;
+    color: #629aa9;
+    padding: 0.08rem 0.25rem;
+    border-radius: 1px;
+    border: 1px solid #2a4a5a;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
   /* ─── SVG filter container ─── */
   .svg-filters { position: absolute; width: 0; height: 0; overflow: hidden; }
 </style>
@@ -1576,6 +1592,37 @@ function App() {
 
     setDetailLoading(true);
     try {
+      // ─── Bandcamp-sourced result: fetch from Bandcamp, not Discogs ───
+      if (r._bcSource && r._bcUrl) {
+        const bcRes = await fetch(`${DISCOGS_API}/bandcamp/album?url=${encodeURIComponent(r._bcUrl)}`);
+        if (bcRes.ok) {
+          const album = await bcRes.json();
+          const tracklist = (album.tracks || []).map((t, idx) => ({
+            position: String(idx + 1),
+            title: t.name || "",
+            duration: t.duration ? `${Math.floor(t.duration / 60)}:${String(Math.round(t.duration % 60)).padStart(2, "0")}` : "",
+          }));
+          const extraartists = [];
+          if (album.publisher && album.publisher.name) {
+            extraartists.push({ name: album.publisher.name, role: "Label", id: null });
+          }
+          const detail = {
+            tracklist,
+            extraartists,
+            artists: album.artist ? [{ name: album.artist.name, id: null }] : [],
+            notes: album.description || "",
+            videos: [],
+            _bcAlbum: true,
+          };
+          setDetailCache(prev => ({ ...prev, [cardId]: detail }));
+        } else {
+          setDetailCache(prev => ({ ...prev, [cardId]: { tracklist: [], extraartists: [], artists: [], notes: "", videos: [], error: "Could not load Bandcamp album" } }));
+        }
+        setDetailLoading(false);
+        return;
+      }
+
+      // ─── Discogs-sourced result ───
       let releaseData = null;
       let masterData = null;
 
@@ -2108,6 +2155,59 @@ function App() {
 
       setResults(finalResults);
       setPagination(data.pagination || null);
+
+      // ─── Parallel Bandcamp search (non-blocking, appends results) ───
+      if (p === 1) {
+        const bcQuery = [artistSearch, releaseTitle, credit, query].filter(Boolean).join(" ").trim();
+        if (bcQuery) {
+          (async () => {
+            try {
+              const bcRes = await fetch(`${DISCOGS_API}/bandcamp/search?q=${encodeURIComponent(bcQuery)}&type=album`);
+              if (!bcRes.ok) return;
+              const bcData = await bcRes.json();
+              const bcItems = bcData.items || [];
+              if (bcItems.length === 0) return;
+
+              // Build a set of Discogs titles for dedup (lowercase, stripped)
+              const normalize = (s) => (s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+              const discogsTitles = new Set(
+                finalResults.map(r => {
+                  const { artist: a, title: t } = parseTitle(r.title);
+                  return normalize(a) + "|||" + normalize(t);
+                })
+              );
+
+              // Filter to BC results not already in Discogs
+              const uniqueBc = bcItems.filter(item => {
+                const key = normalize(item.artist) + "|||" + normalize(item.name);
+                return !discogsTitles.has(key);
+              });
+
+              if (uniqueBc.length === 0) return;
+
+              // Convert BC results to the shape our cards expect
+              const bcCards = uniqueBc.slice(0, 10).map((item, idx) => ({
+                id: `bc-${idx}-${Date.now()}`,
+                title: item.artist ? `${item.artist} - ${item.name}` : item.name,
+                year: item.releaseDate ? item.releaseDate.replace(/^.*(\d{4}).*$/, "$1") : "",
+                thumb: item.imageUrl || "",
+                format: [],
+                genre: [],
+                style: [],
+                country: "",
+                label: [],
+                uri: "",
+                _bcSource: true,
+                _bcUrl: item.url || "",
+                _bcTags: item.tags || "",
+                _bcNumTracks: item.numTracks || null,
+              }));
+
+              setResults(prev => [...prev, ...bcCards]);
+            } catch (e) { /* silently fail bandcamp search */ }
+          })();
+        }
+      }
     } catch (e) {
       setError(e.message);
       setResults([]);
@@ -2590,7 +2690,7 @@ function App() {
             return (
               <React.Fragment key={r.id}>
               <div
-                className={`release-card ${isSelected ? 'selected' : ''}`}
+                className={`release-card ${isSelected ? 'selected' : ''} ${r._bcSource ? 'bc-source' : ''}`}
                 onClick={() => expandCard(r)}
                 style={{ animationDelay: `${i * 30}ms` }}
               >
@@ -2605,6 +2705,7 @@ function App() {
                   <div className="release-meta">
                     {r.year && <span>{r.year}</span>}
                     {r._orphan && <span style={{color:'var(--cardboard-dark)',fontSize:'0.55rem',fontStyle:'italic'}}>release only</span>}
+                    {r._bcSource && <span className="bc-source-badge">Bandcamp</span>}
                     {r._artistRole && <span style={{color:'var(--cardboard)',fontSize:'0.55rem',fontStyle:'italic'}}>{r._artistRole}</span>}
                     {r.country && <span className="meta-click" onClick={e => { e.stopPropagation(); applyFilter('country', r.country); }}>{r.country}</span>}
                     {r.format && <span>{r.format.join(", ")}</span>}
@@ -2618,7 +2719,7 @@ function App() {
                   <a className="apple-link" href={appleMusicSearchUrl(artist, title, r.year, r.format)} target="_blank" rel="noopener">♫ Apple Music ↗</a>
                   <a className="ytmusic-link" href={ytMusicSearchUrl(artist, title, r.year, r.format)} target="_blank" rel="noopener">♬ YT Music ↗</a>
                   <a className="yt-link" href={ytSearchUrl(artist, title, r.year, r.format)} target="_blank" rel="noopener">▶ YouTube ↗</a>
-                  <a className="bandcamp-link" href={bandcampSearchUrl(artist, title, r.year, r.format)} target="_blank" rel="noopener">Bandcamp ↗</a>
+                  <a className="bandcamp-link" href={r._bcSource ? r._bcUrl : bandcampSearchUrl(artist, title, r.year, r.format)} target="_blank" rel="noopener">{r._bcSource ? 'Bandcamp (direct) ↗' : 'Bandcamp ↗'}</a>
                   {r.uri && (
                     <a className="discogs-link" href={discogsUrl(r.uri)} target="_blank" rel="noopener">Discogs ↗</a>
                   )}
