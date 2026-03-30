@@ -970,6 +970,67 @@
     text-align: right;
   }
 
+  /* ─── Bandcamp credits ─── */
+  .bc-credits-section {
+    margin-top: 0.6rem;
+    padding-top: 0.5rem;
+    border-top: 1px dashed #2a4a4a;
+  }
+  .bc-credits-header {
+    font-family: var(--font-header);
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #629aa9;
+    margin-bottom: 0.3rem;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+  .bc-badge {
+    font-family: var(--font-typed);
+    font-size: 0.5rem;
+    background: #1a2a30;
+    color: #629aa9;
+    padding: 0.1rem 0.3rem;
+    border-radius: 1px;
+    border: 1px solid #2a4a5a;
+  }
+  .bc-credit-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 0.15rem 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.65rem;
+    gap: 0.5rem;
+  }
+  .bc-credit-row:last-child { border-bottom: none; }
+  .bc-credit-name {
+    color: #629aa9;
+    flex-shrink: 0;
+  }
+  .bc-credit-role {
+    color: var(--paper-dim);
+    font-size: 0.58rem;
+    text-align: right;
+  }
+  .bc-album-link {
+    font-size: 0.55rem;
+    color: #629aa9;
+    border: 1px solid #2a3a4a;
+    padding: 0.1rem 0.35rem;
+    border-radius: 1px;
+    text-decoration: none;
+    margin-left: auto;
+  }
+  .bc-album-link:hover {
+    background: #1da0c3;
+    color: #fff;
+    border-color: #1da0c3;
+  }
+
   /* ─── SVG filter container ─── */
   .svg-filters { position: absolute; width: 0; height: 0; overflow: hidden; }
 </style>
@@ -1308,6 +1369,7 @@ function App() {
 
   // MusicBrainz supplemental credits cache
   const [mbCreditsCache, setMbCreditsCache] = useState({}); // cardId -> [{name, role}] | null | "loading"
+  const [bcCreditsCache, setBcCreditsCache] = useState({}); // cardId -> {credits:[{name,role}], albumUrl, tracks:[]} | null | "loading"
 
   // Selection + matching
   const [selected, setSelected] = useState({});  // id -> release object
@@ -1552,6 +1614,7 @@ function App() {
         const { artist: parsedArtist, title: parsedTitle } = parseTitle(r.title);
         const artistName = parsedArtist || (detail.artists?.[0]?.name || "");
         fetchMbCredits(cardId, artistName, parsedTitle, r.year);
+        fetchBcCredits(cardId, artistName, parsedTitle);
       }
     } catch (e) {
       setDetailCache(prev => ({ ...prev, [cardId]: { tracklist: [], extraartists: [], artists: [], notes: "", videos: [], error: e.message } }));
@@ -1779,6 +1842,83 @@ function App() {
       setMbCreditsCache(prev => ({ ...prev, [cardId]: credits.length > 0 ? credits : null }));
     } catch (e) {
       setMbCreditsCache(prev => ({ ...prev, [cardId]: null }));
+    }
+  };
+
+  // ─── Bandcamp supplemental credits ───
+  const fetchBcCredits = async (cardId, artistName, albumTitle) => {
+    if (bcCreditsCache[cardId] !== undefined) return;
+    setBcCreditsCache(prev => ({ ...prev, [cardId]: "loading" }));
+
+    try {
+      const cleanArtist = (artistName || "").replace(/\s*\(\d+\)\s*$/, "");
+      const q = encodeURIComponent([cleanArtist, albumTitle].filter(Boolean).join(" "));
+      const searchRes = await fetch(`${DISCOGS_API}/bandcamp/search?q=${q}&type=album`);
+
+      if (!searchRes.ok) {
+        setBcCreditsCache(prev => ({ ...prev, [cardId]: null }));
+        return;
+      }
+
+      const searchData = await searchRes.json();
+      const items = searchData.items || [];
+      if (items.length === 0) {
+        setBcCreditsCache(prev => ({ ...prev, [cardId]: null }));
+        return;
+      }
+
+      // Pick best match — prefer exact artist match
+      let bestMatch = items[0];
+      if (cleanArtist) {
+        const artistLower = cleanArtist.toLowerCase();
+        const exactMatch = items.find(it => (it.artist || "").toLowerCase() === artistLower);
+        if (exactMatch) bestMatch = exactMatch;
+      }
+
+      if (!bestMatch.url) {
+        setBcCreditsCache(prev => ({ ...prev, [cardId]: null }));
+        return;
+      }
+
+      // Fetch album details from Bandcamp
+      const albumRes = await fetch(`${DISCOGS_API}/bandcamp/album?url=${encodeURIComponent(bestMatch.url)}`);
+      if (!albumRes.ok) {
+        setBcCreditsCache(prev => ({ ...prev, [cardId]: null }));
+        return;
+      }
+
+      const album = await albumRes.json();
+
+      // Extract credits from album data
+      const credits = [];
+      if (album.artist && album.artist.name) {
+        credits.push({ name: album.artist.name, role: "Primary Artist" });
+      }
+      if (album.publisher && album.publisher.name && album.publisher.name !== (album.artist && album.artist.name)) {
+        credits.push({ name: album.publisher.name, role: "Publisher / Label" });
+      }
+
+      // Extract track info
+      const tracks = (album.tracks || []).map(t => ({
+        name: t.name,
+        duration: t.duration ? Math.round(t.duration) : null,
+        streamUrl: t.streamUrl || null,
+      }));
+
+      setBcCreditsCache(prev => ({
+        ...prev,
+        [cardId]: {
+          credits,
+          albumUrl: bestMatch.url,
+          tracks,
+          tags: album.keywords || [],
+          description: album.description || "",
+          genre: album.genre || "",
+          location: album.location || "",
+        }
+      }));
+    } catch (e) {
+      setBcCreditsCache(prev => ({ ...prev, [cardId]: null }));
     }
   };
 
@@ -2554,6 +2694,65 @@ function App() {
                                       <span className="mb-credit-role">{c.role}</span>
                                     </div>
                                   ))}
+                                </div>
+                              );
+                            }
+                            return null;
+                          })()}
+
+                          {/* Bandcamp supplemental credits */}
+                          {(() => {
+                            const cardId = r.master_id || r.id;
+                            const bcData = bcCreditsCache[cardId];
+                            if (bcData === "loading") {
+                              return (
+                                <div className="bc-credits-section">
+                                  <div className="bc-credits-header">
+                                    <span className="bc-badge">Bandcamp</span>
+                                    <span className="spinner" style={{width:10,height:10,borderWidth:1.5,marginRight:0}}></span>
+                                    searching Bandcamp…
+                                  </div>
+                                </div>
+                              );
+                            }
+                            if (bcData && typeof bcData === "object" && bcData.credits) {
+                              // Filter out credits that already appear in Discogs or MB
+                              const existingNames = new Set([
+                                ...(d.extraartists || []).map(ea => ea.name.replace(/\s*\(\d+\)\s*$/, "").toLowerCase()),
+                                ...(d.artists || []).map(a => a.name.replace(/\s*\(\d+\)\s*$/, "").toLowerCase()),
+                              ]);
+                              const mbData = mbCreditsCache[cardId];
+                              if (mbData && Array.isArray(mbData)) {
+                                mbData.forEach(c => existingNames.add(c.name.toLowerCase()));
+                              }
+                              const uniqueBc = bcData.credits.filter(c => !existingNames.has(c.name.toLowerCase()));
+
+                              // Show section if we have unique credits, tags, or a link
+                              const hasTags = bcData.tags && bcData.tags.length > 0;
+                              const hasInfo = uniqueBc.length > 0 || hasTags || bcData.albumUrl;
+                              if (!hasInfo) return null;
+
+                              return (
+                                <div className="bc-credits-section">
+                                  <div className="bc-credits-header">
+                                    <span className="bc-badge">Bandcamp</span>
+                                    {bcData.albumUrl && (
+                                      <a className="bc-album-link" href={bcData.albumUrl} target="_blank" rel="noopener" onClick={e => e.stopPropagation()}>
+                                        View on Bandcamp ↗
+                                      </a>
+                                    )}
+                                  </div>
+                                  {uniqueBc.map((c, ci) => (
+                                    <div key={ci} className="bc-credit-row">
+                                      <span className="bc-credit-name">{c.name}</span>
+                                      <span className="bc-credit-role">{c.role}</span>
+                                    </div>
+                                  ))}
+                                  {hasTags && (
+                                    <div style={{marginTop:'0.3rem',fontSize:'0.55rem',color:'var(--paper-dim)'}}>
+                                      Tags: {bcData.tags.slice(0, 8).join(", ")}
+                                    </div>
+                                  )}
                                 </div>
                               );
                             }
